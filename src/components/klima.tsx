@@ -27,8 +27,8 @@ type OnStatusHandler = (
   message?: string
 ) => void;
 
-const BCT_ADDRESS = addresses.mainnet.bct;
-const RETIREMENT_AGGREGATOR_V2 = addresses.mainnet.retirementAggregatorV2;
+const BCT_ADDRESS = addresses.mainnet.bct as `0x${string}`;
+const RETIREMENT_AGGREGATOR_V2 = addresses.mainnet.retirementAggregatorV2 as `0x${string}`;
 
 export default function Klima(
   { title }: { title?: string } = { title: "Klima Frame" }
@@ -140,7 +140,7 @@ export default function Klima(
     address: BCT_ADDRESS,
     abi: erc20Abi,
     functionName: "allowance",
-    args: [address || "0x", RETIREMENT_AGGREGATOR_V2],
+    args: [address || "0x0000000000000000000000000000000000000000", RETIREMENT_AGGREGATOR_V2],
     watch: true,
   });
 
