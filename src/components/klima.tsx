@@ -412,7 +412,7 @@ export default function Klima(
               </div>
 
               <div>
-                <Label htmlFor="beneficiaryAddress">Beneficiary Address (optional)</Label>
+                <Label htmlFor="beneficiaryAddress">Beneficiary Address</Label>
                 <Input
                   id="beneficiaryAddress"
                   value={retirementParams.beneficiaryAddress}
