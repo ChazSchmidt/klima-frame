@@ -549,7 +549,7 @@ export default function Klima(
             <div className="mt-8">
               <h2 className="text-xl font-bold mb-4">Completed Retirements</h2>
               <div className="space-y-4">
-                {completedRetirements.map((retirement, index) => (
+                {completedRetirements.map((retirement) => (
                   <div 
                     key={retirement.txHash} 
                     className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg"
