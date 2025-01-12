@@ -306,15 +306,6 @@ export default function Klima(
     }
   }, [retirementParams.retireAmount]);
 
-  const handleUseFarcasterAddress = useCallback(() => {
-    if (context?.user?.verified_addresses?.[0]) {
-      setRetirementParams(prev => ({
-        ...prev,
-        beneficiaryAddress: context.user.verified_addresses[0]
-      }));
-    }
-  }, [context?.user?.verified_addresses]);
-
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
   }
@@ -415,41 +406,15 @@ export default function Klima(
 
               <div>
                 <Label htmlFor="beneficiaryAddress">Beneficiary Address (optional)</Label>
-                <div className="space-y-2">
-                  <div className="flex justify-end gap-2">
-                    {address && (
-                      <button
-                        onClick={() => setRetirementParams(prev => ({
-                          ...prev,
-                          beneficiaryAddress: address
-                        }))}
-                        type="button"
-                        className="text-wood-utility hover:text-wood-utility-hover transition-colors text-xs"
-                      >
-                        Use your address
-                      </button>
-                    )}
-                    {context?.user?.verified_addresses?.[0] && (
-                      <button
-                        onClick={handleUseFarcasterAddress}
-                        type="button"
-                        className="text-wood-utility hover:text-wood-utility-hover transition-colors text-xs"
-                      >
-                        Use Farcaster address
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={retirementParams.beneficiaryAddress}
-                    onChange={(e) => setRetirementParams(prev => ({
-                      ...prev,
-                      beneficiaryAddress: e.target.value
-                    }))}
-                    className="w-full p-2 border rounded"
-                    placeholder="0x..."
-                  />
-                </div>
+                <Input
+                  id="beneficiaryAddress"
+                  value={retirementParams.beneficiaryAddress}
+                  onChange={(e) => setRetirementParams(prev => ({
+                    ...prev,
+                    beneficiaryAddress: e.target.value
+                  }))}
+                  placeholder="0x..."
+                />
               </div>
 
               <div>
