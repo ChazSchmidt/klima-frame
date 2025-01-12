@@ -185,6 +185,9 @@ export default function Klima(
     try {
       handleOnStatus("userConfirmation");
       
+      const beneficiaryAddress = (retirementParams.beneficiaryAddress || address) as `0x${string}`;
+      if (!beneficiaryAddress) return;
+
       await sendTransaction({
         to: RETIREMENT_AGGREGATOR_V2,
         data: encodeFunctionData({
@@ -196,7 +199,7 @@ export default function Klima(
             parseEther(retirementParams.maxAmountIn),
             parseEther(retirementParams.retireAmount),
             "",
-            retirementParams.beneficiaryAddress || address,
+            beneficiaryAddress,
             retirementParams.beneficiaryString,
             retirementParams.retirementMessage,
             0,
