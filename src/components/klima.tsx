@@ -288,19 +288,20 @@ export default function Klima(
 
   useEffect(() => {
     if (isConfirmed && txHash) {
-      if (txStatus?.message !== "Approving BCT...") {
-        setCompletedRetirements(prev => [...prev, {
+      refetchAllowance();
+      
+      if (!txStatus?.message?.includes("Approving")) {
+        setCompletedRetirements(prev => [{
           amount: retirementParams.retireAmount,
           txHash,
           timestamp: Date.now(),
-        }]);
+        }, ...prev]);
         
         const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
         handleOnStatus("done", successMsg);
         setSuccessMessage(successMsg);
         resetForm();
       }
-      refetchAllowance();
     }
   }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm, refetchAllowance]);
 
