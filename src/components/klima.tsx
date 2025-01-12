@@ -158,10 +158,6 @@ export default function Klima(
       BCT_ADDRESS,
       parseEther(retirementParams.retireAmount),
     ] : undefined,
-    onSuccess: (data) => {
-      console.log('Raw estimated cost:', data);
-      console.log('Formatted estimated cost:', formatEther(data));
-    }
   });
 
   useEffect(() => {
