@@ -200,14 +200,15 @@ export default function Klima(
           abi: KlimaInfinity,
           functionName: 'retireExactCarbonDefault',
           args: [
-            BCT_ADDRESS,
-            BCT_ADDRESS,
-            amount,
-            "",
-            beneficiaryAddress,
-            retirementParams.beneficiaryString || "",
-            retirementParams.retirementMessage || "",
-            0,
+            BCT_ADDRESS, // sourceToken
+            BCT_ADDRESS, // poolToken
+            amount, // maxAmountIn
+            amount, // retireAmount
+            "", // retiringEntityString
+            beneficiaryAddress, // beneficiaryAddress
+            retirementParams.beneficiaryString || "", // beneficiaryString
+            retirementParams.retirementMessage || "", // retirementMessage
+            0, // fromMode
           ]
         }),
       }, {
