@@ -17,7 +17,7 @@ import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
 import { addresses } from "~/lib/constants";
-import KlimaInfinity from "~/lib/contracts/abi/KlimaInfinity.ts";
+import KlimaInfinity from "~/lib/contracts/abi/KlimaInfinity";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { BaseError, UserRejectedRequestError } from "viem";
