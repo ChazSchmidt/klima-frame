@@ -158,6 +158,10 @@ export default function Klima(
       BCT_ADDRESS,
       parseEther(retirementParams.retireAmount),
     ] : undefined,
+    onSuccess: (data) => {
+      console.log('Raw estimated cost:', data);
+      console.log('Formatted estimated cost:', formatEther(data));
+    }
   });
 
   useEffect(() => {
@@ -192,7 +196,9 @@ export default function Klima(
       const beneficiaryAddress = (retirementParams.beneficiaryAddress || address) as `0x${string}`;
       if (!beneficiaryAddress) return;
 
-      const amount = parseEther(retirementParams.retireAmount);
+      // Convert amounts to BigInt values
+      const retireAmount = parseEther(retirementParams.retireAmount);
+      const maxAmountIn = parseEther(retirementParams.maxAmountIn);
       
       await sendTransaction({
         to: RETIREMENT_AGGREGATOR_V2,
@@ -202,8 +208,8 @@ export default function Klima(
           args: [
             BCT_ADDRESS, // sourceToken
             BCT_ADDRESS, // poolToken
-            amount, // maxAmountIn
-            amount, // retireAmount
+            maxAmountIn, // maxAmountIn - this was missing before
+            retireAmount, // retireAmount
             "", // retiringEntityString
             beneficiaryAddress, // beneficiaryAddress
             retirementParams.beneficiaryString || "", // beneficiaryString
@@ -236,12 +242,14 @@ export default function Klima(
     try {
       handleOnStatus("userConfirmation");
       
+      const approvalAmount = offsetCostData || parseEther(retirementParams.maxAmountIn);
+      
       await sendTransaction({
         to: BCT_ADDRESS,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [RETIREMENT_AGGREGATOR_V2, parseEther(retirementParams.maxAmountIn)],
+          args: [RETIREMENT_AGGREGATOR_V2, approvalAmount],
         }),
       }, {
         onSuccess: (hash) => {
@@ -256,7 +264,7 @@ export default function Klima(
       handleOnStatus("error", "Approval failed");
       console.error("Error approving:", err);
     }
-  }, [isConnected, retirementParams.maxAmountIn, sendTransaction, handleOnStatus]);
+  }, [isConnected, offsetCostData, retirementParams.maxAmountIn, sendTransaction, handleOnStatus]);
 
   // Add input validation
   const validateInputs = useCallback(() => {
@@ -298,13 +306,13 @@ export default function Klima(
   }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm]);
 
   useEffect(() => {
-    if (retirementParams.retireAmount) {
+    if (offsetCostData) {
       setRetirementParams(prev => ({
         ...prev,
-        maxAmountIn: retirementParams.retireAmount // 1:1 for BCT
+        maxAmountIn: formatEther(offsetCostData)
       }));
     }
-  }, [retirementParams.retireAmount]);
+  }, [offsetCostData]);
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
