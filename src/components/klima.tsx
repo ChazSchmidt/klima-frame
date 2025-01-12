@@ -179,6 +179,10 @@ export default function Klima(
     }
   }, [successMessage]);
 
+  const handleOnStatus = useCallback<OnStatusHandler>((status, message) => {
+    setTxStatus({ status, message });
+  }, []);
+
   const handleRetireCarbon = useCallback(async () => {
     if (!isConnected || chainId !== 137) return;
 
@@ -222,10 +226,6 @@ export default function Klima(
       console.error("Error retiring carbon:", err);
     }
   }, [isConnected, chainId, sendTransaction, retirementParams, address, handleOnStatus]);
-
-  const handleOnStatus = useCallback<OnStatusHandler>((status, message) => {
-    setTxStatus({ status, message });
-  }, []);
 
   const handleApprove = useCallback(async () => {
     if (!isConnected) return;
