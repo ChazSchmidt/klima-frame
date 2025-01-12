@@ -290,7 +290,11 @@ export default function Klima(
     if (isConfirmed && txHash) {
       refetchAllowance();
       
-      if (!txStatus?.message?.includes("Approving")) {
+      // Check if this was a retirement transaction by looking at the target contract
+      const isRetirement = txHash && 
+        sendTransaction.variables?.to?.toLowerCase() === RETIREMENT_AGGREGATOR_V2.toLowerCase();
+      
+      if (isRetirement) {
         setCompletedRetirements(prev => [{
           amount: retirementParams.retireAmount,
           txHash,
@@ -303,7 +307,7 @@ export default function Klima(
         resetForm();
       }
     }
-  }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm, refetchAllowance]);
+  }, [isConfirmed, txHash, sendTransaction.variables?.to, retirementParams.retireAmount, handleOnStatus, resetForm, refetchAllowance]);
 
   useEffect(() => {
     if (offsetCostData) {
