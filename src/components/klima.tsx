@@ -208,7 +208,7 @@ export default function Klima(
             beneficiaryAddress,
             retirementParams.beneficiaryString || "",
             retirementParams.retirementMessage || "",
-            0n,
+            0,
           ]
         }),
       }, {
