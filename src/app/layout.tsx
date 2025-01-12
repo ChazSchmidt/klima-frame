@@ -5,8 +5,8 @@ import "~/app/globals.css";
 import { Providers } from "~/app/providers";
 
 export const metadata: Metadata = {
-  title: "Farcaster Frames v2 Demo",
-  description: "A Farcaster Frames v2 demo app",
+  title: "Klima Frame",
+  description: "A Farcaster Frame to retire carbon via KlimaDAO",
 };
 
 export default async function RootLayout({

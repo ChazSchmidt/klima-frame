@@ -2,12 +2,12 @@
 
 import dynamic from "next/dynamic";
 
-const Demo = dynamic(() => import("~/components/Demo"), {
+const Klima = dynamic(() => import("~/components/klima"), {
   ssr: false,
 });
 
 export default function App(
-  { title }: { title?: string } = { title: "Frames v2 Demo" }
+  { title }: { title?: string } = { title: "Klima Frame" }
 ) {
-  return <Demo title={title} />;
+  return <Klima title={title} />;
 }
