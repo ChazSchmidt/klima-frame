@@ -158,7 +158,6 @@ export default function Klima(
       BCT_ADDRESS,
       parseEther(retirementParams.retireAmount),
     ] : undefined,
-    enabled: !!retirementParams.retireAmount,
   });
 
   useEffect(() => {
@@ -169,7 +168,6 @@ export default function Klima(
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
-    enabled: !!txHash,
   });
 
   useEffect(() => {
