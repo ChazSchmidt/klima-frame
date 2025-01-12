@@ -1,15 +1,23 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId, useSendTransaction, readContract } from "wagmi";
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+  useDisconnect,
+  useConnect,
+  useSwitchChain,
+  useChainId,
+  useContractRead,
+} from "wagmi";
 import { erc20Abi, formatEther, parseEther, encodeFunctionData } from 'viem';
-import sdk, { AddFrame, FrameNotificationDetails, type Context } from "@farcaster/frame-sdk";
+import sdk, { AddFrame, type Context } from "@farcaster/frame-sdk";
 import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
 import { base, optimism } from "wagmi/chains";
 import { addresses } from "~/lib/constants";
-
 import KlimaInfinity from "~/lib/contracts/abi/KlimaInfinity.ts";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -54,6 +62,7 @@ export default function Klima(
   const chainId = useChainId();
   const { disconnect } = useDisconnect();
   const { connect } = useConnect();
+  const publicClient = usePublicClient();
 
   const {
     switchChain,
@@ -147,26 +156,23 @@ export default function Klima(
     setSuccessMessage(null);
   }, []);
 
-  const checkAllowance = useCallback(async () => {
-    if (!address) return;
+  const { data: allowanceData } = useContractRead({
+    address: BCT_ADDRESS,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [address || "0x", RETIREMENT_AGGREGATOR_V2],
+    watch: true,
+  });
 
-    try {
-      setIsCheckingAllowance(true);
-      const allowance = await readContract({
-        address: BCT_ADDRESS,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [address, RETIREMENT_AGGREGATOR_V2],
-      });
-
-      setAllowance(formatEther(allowance));
-    } catch (err) {
-      console.error("Error checking allowance:", err);
-      handleOnStatus("error", "Failed to check token allowance");
-    } finally {
-      setIsCheckingAllowance(false);
+  useEffect(() => {
+    if (allowanceData) {
+      setAllowance(formatEther(allowanceData));
     }
-  }, [address]);
+  }, [allowanceData]);
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash as `0x${string}`,
+  });
 
   useEffect(() => {
     if (successMessage) {
@@ -245,13 +251,9 @@ export default function Klima(
     if (!retirementParams.retireAmount) return;
 
     try {
-      const retirementAggregatorContract = {
+      const sourceAmount = await publicClient.readContract({
         address: RETIREMENT_AGGREGATOR_V2,
         abi: KlimaInfinity,
-      };
-
-      const sourceAmount = await readContract({
-        ...retirementAggregatorContract,
         functionName: "getSourceAmountDefaultRetirement",
         args: [
           BCT_ADDRESS,
@@ -264,7 +266,7 @@ export default function Klima(
     } catch (err) {
       console.error("Error getting offset cost:", err);
     }
-  }, [retirementParams.retireAmount]);
+  }, [retirementParams.retireAmount, publicClient]);
 
   const handleApprove = useCallback(async () => {
     if (!isConnected) return;
