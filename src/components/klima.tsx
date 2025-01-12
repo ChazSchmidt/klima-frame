@@ -16,7 +16,6 @@ import sdk, { AddFrame, type Context } from "@farcaster/frame-sdk";
 import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
-import { base, optimism } from "wagmi/chains";
 import { addresses } from "~/lib/constants";
 import KlimaInfinity from "~/lib/contracts/abi/KlimaInfinity.ts";
 import { Input } from "./ui/input";
@@ -52,7 +51,6 @@ export default function Klima(
     message?: string;
   } | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [isCheckingAllowance, setIsCheckingAllowance] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { address, isConnected } = useAccount();
@@ -235,7 +233,7 @@ export default function Klima(
     try {
       handleOnStatus("userConfirmation");
       
-      const tx = await sendTransaction({
+      await sendTransaction({
         to: BCT_ADDRESS,
         data: encodeFunctionData({
           abi: erc20Abi,
@@ -255,7 +253,7 @@ export default function Klima(
       handleOnStatus("error", "Approval failed");
       console.error("Error approving:", err);
     }
-  }, [isConnected, retirementParams.maxAmountIn, sendTransaction]);
+  }, [isConnected, retirementParams.maxAmountIn, sendTransaction, handleOnStatus]);
 
   // Add input validation
   const validateInputs = useCallback(() => {
@@ -506,15 +504,9 @@ export default function Klima(
                 </Button>
               </div>
 
-              {isCheckingAllowance ? (
-                <div className="text-sm text-gray-500">
-                  Checking allowance...
-                </div>
-              ) : (
-                <div className="text-sm">
-                  Current allowance: {parseFloat(allowance).toFixed(4)} BCT
-                </div>
-              )}
+              <div className="text-sm">
+                Current allowance: {parseFloat(allowance).toFixed(4)} BCT
+              </div>
             </div>
           )}
 
