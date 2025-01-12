@@ -1,14 +1,14 @@
 import { createConfig, http, WagmiProvider } from "wagmi";
-import { base, optimism, polygon } from "wagmi/chains";
+import { polygon, base, optimism } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 
 export const config = createConfig({
-  chains: [base, optimism, polygon],
+  chains: [polygon, base, optimism],
   transports: {
+    [polygon.id]: http(),
     [base.id]: http(),
     [optimism.id]: http(),
-    [polygon.id]: http(),
   },
   connectors: [farcasterFrame()],
 });
