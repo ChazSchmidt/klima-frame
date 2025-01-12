@@ -496,9 +496,7 @@ export default function Klima(
               <div className="flex justify-end">
                 <Button
                   onClick={resetForm}
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-500"
+                  className="text-gray-500 border border-gray-300 px-2 py-1 text-sm"
                 >
                   Reset Form
                 </Button>
