@@ -141,7 +141,6 @@ export default function Klima(
     abi: erc20Abi,
     functionName: "allowance",
     args: [address || "0x0000000000000000000000000000000000000000", RETIREMENT_AGGREGATOR_V2],
-    watch: true,
   });
 
   useEffect(() => {
