@@ -67,8 +67,6 @@ export default function Klima(
 
   const {
     sendTransaction,
-    error: sendTxError,
-    isError: isSendTxError,
     isPending: isSendTxPending,
   } = useSendTransaction();
 
