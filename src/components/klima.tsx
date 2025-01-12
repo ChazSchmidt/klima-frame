@@ -1,25 +1,27 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId, readContract, useSendTransaction, encodeFunctionData } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId, useSendTransaction, readContract } from "wagmi";
+import { erc20Abi, formatEther, parseEther, encodeFunctionData } from 'viem';
 import sdk, { AddFrame, FrameNotificationDetails, type Context } from "@farcaster/frame-sdk";
 import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
 import { base, optimism } from "wagmi/chains";
+import { addresses } from "~/lib/constants";
 
 import KlimaInfinity from "~/lib/contracts/abi/KlimaInfinity.ts";
-import { retirementAggregatorV2, bct } from "~/lib/constants";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { parseEther, formatEther } from "viem";
-import { getAllowance } from "~/lib/utils";
 import { BaseError, UserRejectedRequestError } from "viem";
 
 type OnStatusHandler = (
   status: "userConfirmation" | "networkConfirmation" | "done" | "error",
   message?: string
 ) => void;
+
+const BCT_ADDRESS = addresses.mainnet.bct;
+const RETIREMENT_AGGREGATOR_V2 = addresses.mainnet.retirementAggregatorV2;
 
 export default function Klima(
   { title }: { title?: string } = { title: "Klima Frame" }
@@ -151,19 +153,10 @@ export default function Klima(
     try {
       setIsCheckingAllowance(true);
       const allowance = await readContract({
-        address: bct,
-        abi: [{
-          name: "allowance",
-          type: "function",
-          stateMutability: "view",
-          inputs: [
-            { name: "owner", type: "address" },
-            { name: "spender", type: "address" }
-          ],
-          outputs: [{ name: "", type: "uint256" }]
-        }],
+        address: BCT_ADDRESS,
+        abi: erc20Abi,
         functionName: "allowance",
-        args: [address, retirementAggregatorV2],
+        args: [address, RETIREMENT_AGGREGATOR_V2],
       });
 
       setAllowance(formatEther(allowance));
@@ -194,13 +187,13 @@ export default function Klima(
       setIsConfirmed(false);
 
       const tx = await sendTransaction({
-        to: retirementAggregatorV2,
+        to: RETIREMENT_AGGREGATOR_V2,
         data: encodeFunctionData({
           abi: KlimaInfinity,
           functionName: 'retireExactCarbonDefault',
           args: [
-            bct,
-            bct,
+            BCT_ADDRESS,
+            BCT_ADDRESS,
             parseEther(retirementParams.maxAmountIn),
             parseEther(retirementParams.retireAmount),
             "",
@@ -253,7 +246,7 @@ export default function Klima(
 
     try {
       const retirementAggregatorContract = {
-        address: retirementAggregatorV2,
+        address: RETIREMENT_AGGREGATOR_V2,
         abi: KlimaInfinity,
       };
 
@@ -261,8 +254,8 @@ export default function Klima(
         ...retirementAggregatorContract,
         functionName: "getSourceAmountDefaultRetirement",
         args: [
-          bct,
-          bct,
+          BCT_ADDRESS,
+          BCT_ADDRESS,
           parseEther(retirementParams.retireAmount),
         ],
       });
@@ -280,19 +273,11 @@ export default function Klima(
       handleOnStatus("userConfirmation");
       
       const tx = await sendTransaction({
-        to: bct,
+        to: BCT_ADDRESS,
         data: encodeFunctionData({
-          abi: [{
-            name: "approve",
-            type: "function",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "amount", type: "uint256" }
-            ],
-            outputs: [{ name: "", type: "bool" }]
-          }],
-          functionName: "approve",
-          args: [retirementAggregatorV2, parseEther(retirementParams.maxAmountIn)],
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [RETIREMENT_AGGREGATOR_V2, parseEther(retirementParams.maxAmountIn)],
         }),
       });
 
