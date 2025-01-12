@@ -192,6 +192,8 @@ export default function Klima(
       const beneficiaryAddress = (retirementParams.beneficiaryAddress || address) as `0x${string}`;
       if (!beneficiaryAddress) return;
 
+      const amount = parseEther(retirementParams.retireAmount);
+      
       await sendTransaction({
         to: RETIREMENT_AGGREGATOR_V2,
         data: encodeFunctionData({
@@ -200,19 +202,19 @@ export default function Klima(
           args: [
             BCT_ADDRESS,
             BCT_ADDRESS,
-            parseEther(retirementParams.maxAmountIn),
-            parseEther(retirementParams.retireAmount),
-            "",
+            amount,
+            amount,
+            "0x",
             beneficiaryAddress,
-            retirementParams.beneficiaryString,
-            retirementParams.retirementMessage,
-            0,
+            retirementParams.beneficiaryString || "",
+            retirementParams.retirementMessage || "",
+            0n,
           ]
         }),
       }, {
         onSuccess: (hash) => {
           setTxHash(hash);
-          handleOnStatus("networkConfirmation");
+          handleOnStatus("networkConfirmation", "Retiring BCT...");
         },
         onError: (err) => {
           if (err instanceof UserRejectedRequestError) {
@@ -224,6 +226,7 @@ export default function Klima(
       });
     } catch (err) {
       console.error("Error retiring carbon:", err);
+      handleOnStatus("error", "Failed to retire carbon");
     }
   }, [isConnected, chainId, sendTransaction, retirementParams, address, handleOnStatus]);
 
@@ -243,7 +246,7 @@ export default function Klima(
       }, {
         onSuccess: (hash) => {
           setTxHash(hash);
-          handleOnStatus("networkConfirmation");
+          handleOnStatus("networkConfirmation", "Approving BCT...");
         },
         onError: () => {
           handleOnStatus("error", "Transaction failed");
@@ -285,12 +288,23 @@ export default function Klima(
 
   useEffect(() => {
     if (isConfirmed && txHash) {
-      const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
-      handleOnStatus("done", successMsg);
-      setSuccessMessage(successMsg);
-      resetForm();
+      if (txStatus?.message !== "Approving BCT...") {
+        const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
+        handleOnStatus("done", successMsg);
+        setSuccessMessage(successMsg);
+        resetForm();
+      }
     }
-  }, [isConfirmed, txHash, retirementParams.retireAmount, handleOnStatus, resetForm]);
+  }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm]);
+
+  useEffect(() => {
+    if (retirementParams.retireAmount) {
+      setRetirementParams(prev => ({
+        ...prev,
+        maxAmountIn: retirementParams.retireAmount // 1:1 for BCT
+      }));
+    }
+  }, [retirementParams.retireAmount]);
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
@@ -483,7 +497,9 @@ export default function Klima(
                   <div className="text-sm">
                     Status:{" "}
                     {isConfirming ? (
-                      <span className="text-yellow-500">Confirming...</span>
+                      <span className="text-yellow-500">
+                        {txStatus?.message || "Confirming..."}
+                      </span>
                     ) : isConfirmed ? (
                       <span className="text-green-500">Confirmed!</span>
                     ) : (
