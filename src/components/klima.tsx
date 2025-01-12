@@ -52,6 +52,11 @@ export default function Klima(
   } | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [completedRetirements, setCompletedRetirements] = useState<Array<{
+    amount: string;
+    txHash: string;
+    timestamp: number;
+  }>>([]);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -134,7 +139,7 @@ export default function Klima(
     setSuccessMessage(null);
   }, []);
 
-  const { data: allowanceData } = useContractRead({
+  const { data: allowanceData, refetch: refetchAllowance } = useContractRead({
     address: BCT_ADDRESS,
     abi: erc20Abi,
     functionName: "allowance",
@@ -284,13 +289,20 @@ export default function Klima(
   useEffect(() => {
     if (isConfirmed && txHash) {
       if (txStatus?.message !== "Approving BCT...") {
+        setCompletedRetirements(prev => [...prev, {
+          amount: retirementParams.retireAmount,
+          txHash,
+          timestamp: Date.now(),
+        }]);
+        
         const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
         handleOnStatus("done", successMsg);
         setSuccessMessage(successMsg);
         resetForm();
       }
+      refetchAllowance();
     }
-  }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm]);
+  }, [isConfirmed, txHash, txStatus?.message, retirementParams.retireAmount, handleOnStatus, resetForm, refetchAllowance]);
 
   useEffect(() => {
     if (offsetCostData) {
@@ -530,6 +542,38 @@ export default function Klima(
           {successMessage && (
             <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-out">
               {successMessage}
+            </div>
+          )}
+
+          {completedRetirements.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Completed Retirements</h2>
+              <div className="space-y-4">
+                {completedRetirements.map((retirement, index) => (
+                  <div 
+                    key={retirement.txHash} 
+                    className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg"
+                  >
+                    <div className="text-sm">
+                      Amount: {retirement.amount} BCT
+                    </div>
+                    <div className="text-sm">
+                      Transaction:{" "}
+                      <a 
+                        href={getPolygonScanLink(retirement.txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 underline"
+                      >
+                        {truncateAddress(retirement.txHash)}
+                      </a>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(retirement.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
