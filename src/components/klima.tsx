@@ -187,12 +187,9 @@ export default function Klima(
     if (!isConnected || chainId !== 137) return;
 
     try {
-      handleOnStatus("userConfirmation");
-      
       const beneficiaryAddress = (retirementParams.beneficiaryAddress || address) as `0x${string}`;
       if (!beneficiaryAddress) return;
 
-      // Convert amounts to BigInt values
       const retireAmount = parseEther(retirementParams.retireAmount);
       const maxAmountIn = parseEther(retirementParams.maxAmountIn);
       
@@ -202,21 +199,20 @@ export default function Klima(
           abi: KlimaInfinity,
           functionName: 'retireExactCarbonDefault',
           args: [
-            BCT_ADDRESS, // sourceToken
-            BCT_ADDRESS, // poolToken
-            maxAmountIn, // maxAmountIn - this was missing before
-            retireAmount, // retireAmount
-            "", // retiringEntityString
-            beneficiaryAddress, // beneficiaryAddress
-            retirementParams.beneficiaryString || "", // beneficiaryString
-            retirementParams.retirementMessage || "", // retirementMessage
-            0, // fromMode
+            BCT_ADDRESS,
+            BCT_ADDRESS,
+            maxAmountIn,
+            retireAmount,
+            "",
+            beneficiaryAddress,
+            retirementParams.beneficiaryString || "",
+            retirementParams.retirementMessage || "",
+            0,
           ]
         }),
       }, {
         onSuccess: (hash) => {
           setTxHash(hash);
-          handleOnStatus("networkConfirmation", "Retiring BCT...");
         },
         onError: (err) => {
           if (err instanceof UserRejectedRequestError) {
@@ -236,8 +232,6 @@ export default function Klima(
     if (!isConnected) return;
 
     try {
-      handleOnStatus("userConfirmation");
-      
       const approvalAmount = offsetCostData || parseEther(retirementParams.maxAmountIn);
       
       await sendTransaction({
@@ -250,7 +244,6 @@ export default function Klima(
       }, {
         onSuccess: (hash) => {
           setTxHash(hash);
-          handleOnStatus("networkConfirmation", "Approving BCT...");
         },
         onError: () => {
           handleOnStatus("error", "Transaction failed");
@@ -456,8 +449,8 @@ export default function Klima(
               {parseFloat(allowance) < parseFloat(retirementParams.maxAmountIn) ? (
                 <Button
                   onClick={handleApprove}
-                  disabled={!retirementParams.maxAmountIn || parseFloat(retirementParams.maxAmountIn) <= 0}
-                  isLoading={txStatus?.status === "networkConfirmation"}
+                  disabled={!retirementParams.maxAmountIn || parseFloat(retirementParams.maxAmountIn) <= 0 || isConfirming}
+                  isLoading={isConfirming}
                 >
                   Approve BCT
                 </Button>
@@ -467,23 +460,13 @@ export default function Klima(
                   disabled={
                     isSendTxPending || 
                     !validateInputs() || 
-                    txStatus?.status === "networkConfirmation"
+                    isConfirming
                   }
-                  isLoading={txStatus?.status === "networkConfirmation"}
+                  isLoading={isConfirming}
                 >
                   Retire Carbon
                 </Button>
               )}
-
-              {txStatus && (
-                <div className={`text-sm ${
-                  txStatus.status === "error" ? "text-red-500" : "text-green-500"
-                }`}>
-                  {txStatus.status}: {txStatus.message}
-                </div>
-              )}
-
-              {isSendTxError && renderError(sendTxError)}
 
               {txHash && (
                 <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg space-y-2">
@@ -502,7 +485,7 @@ export default function Klima(
                     Status:{" "}
                     {isConfirming ? (
                       <span className="text-yellow-500">
-                        {txStatus?.message || "Confirming..."}
+                        Confirming...
                       </span>
                     ) : isConfirmed ? (
                       <span className="text-green-500">Confirmed!</span>
