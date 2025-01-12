@@ -37,7 +37,6 @@ export default function Klima(
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [context, setContext] = useState<Context.FrameContext>();
   const [added, setAdded] = useState(false);
-  const [notificationDetails, setNotificationDetails] = useState<FrameNotificationDetails | null>(null);
   const [addFrameResult, setAddFrameResult] = useState("");
   const [retirementParams, setRetirementParams] = useState({
     maxAmountIn: "",
@@ -53,8 +52,6 @@ export default function Klima(
     message?: string;
   } | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false);
   const [isCheckingAllowance, setIsCheckingAllowance] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -62,7 +59,6 @@ export default function Klima(
   const chainId = useChainId();
   const { disconnect } = useDisconnect();
   const { connect } = useConnect();
-  const publicClient = usePublicClient();
 
   const {
     switchChain,
@@ -78,26 +74,18 @@ export default function Klima(
     isPending: isSendTxPending,
   } = useSendTransaction();
 
-  const handleSwitchChain = useCallback(() => {
-    switchChain({ chainId: chainId === base.id ? optimism.id : base.id });
-  }, [switchChain, chainId]);
-
   useEffect(() => {
     const load = async () => {
       const context = await sdk.context;
       setContext(context);
       setAdded(context.client.added);
 
-      sdk.on("frameAdded", ({ notificationDetails }) => {
+      sdk.on("frameAdded", () => {
         setAdded(true);
-        if (notificationDetails) {
-          setNotificationDetails(notificationDetails);
-        }
       });
 
       sdk.on("frameRemoved", () => {
         setAdded(false);
-        setNotificationDetails(null);
       });
 
       console.log("Calling ready");
@@ -116,12 +104,8 @@ export default function Klima(
 
   const addFrame = useCallback(async () => {
     try {
-      setNotificationDetails(null);
       const result = await sdk.actions.addFrame();
 
-      if (result.notificationDetails) {
-        setNotificationDetails(result.notificationDetails);
-      }
       setAddFrameResult(
         result.notificationDetails
           ? `Added, got notificaton token ${result.notificationDetails.token} and url ${result.notificationDetails.url}`
@@ -151,8 +135,6 @@ export default function Klima(
     setEstimatedCost("");
     setTxStatus(null);
     setTxHash(null);
-    setIsConfirming(false);
-    setIsConfirmed(false);
     setSuccessMessage(null);
   }, []);
 
@@ -170,8 +152,27 @@ export default function Klima(
     }
   }, [allowanceData]);
 
+  const { data: offsetCostData } = useContractRead({
+    address: RETIREMENT_AGGREGATOR_V2,
+    abi: KlimaInfinity,
+    functionName: "getSourceAmountDefaultRetirement",
+    args: retirementParams.retireAmount ? [
+      BCT_ADDRESS,
+      BCT_ADDRESS,
+      parseEther(retirementParams.retireAmount),
+    ] : undefined,
+    enabled: !!retirementParams.retireAmount,
+  });
+
+  useEffect(() => {
+    if (offsetCostData) {
+      setEstimatedCost(formatEther(offsetCostData));
+    }
+  }, [offsetCostData]);
+
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
+    enabled: !!txHash,
   });
 
   useEffect(() => {
@@ -188,11 +189,8 @@ export default function Klima(
 
     try {
       handleOnStatus("userConfirmation");
-      setTxHash(null);
-      setIsConfirming(false);
-      setIsConfirmed(false);
-
-      const tx = await sendTransaction({
+      
+      await sendTransaction({
         to: RETIREMENT_AGGREGATOR_V2,
         data: encodeFunctionData({
           abi: KlimaInfinity,
@@ -209,64 +207,27 @@ export default function Klima(
             0,
           ]
         }),
+      }, {
+        onSuccess: (hash) => {
+          setTxHash(hash);
+          handleOnStatus("networkConfirmation");
+        },
+        onError: (err) => {
+          if (err instanceof UserRejectedRequestError) {
+            handleOnStatus("error", "Transaction rejected by user");
+          } else {
+            handleOnStatus("error", "Transaction failed");
+          }
+        },
       });
-
-      setTxHash(tx.hash);
-      handleOnStatus("networkConfirmation");
-      setIsConfirming(true);
-
-      await tx.wait();
-      setIsConfirming(false);
-      setIsConfirmed(true);
-      
-      const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
-      handleOnStatus("done", successMsg);
-      setSuccessMessage(successMsg);
-
-      resetForm();
     } catch (err) {
-      setIsConfirming(false);
-      if (err instanceof UserRejectedRequestError) {
-        handleOnStatus("error", "Transaction rejected by user");
-      } else if (err instanceof BaseError) {
-        if (err.message.includes("insufficient funds")) {
-          handleOnStatus("error", "Insufficient funds for transaction");
-        } else if (err.message.includes("gas required exceeds allowance")) {
-          handleOnStatus("error", "Gas estimation failed");
-        } else {
-          handleOnStatus("error", `Transaction failed: ${err.message}`);
-        }
-      } else {
-        handleOnStatus("error", "Retirement failed - please try again");
-      }
       console.error("Error retiring carbon:", err);
     }
-  }, [isConnected, chainId, sendTransaction, retirementParams, address, handleOnStatus, resetForm]);
+  }, [isConnected, chainId, sendTransaction, retirementParams, address, handleOnStatus]);
 
-  const handleOnStatus: OnStatusHandler = (status, message) => {
+  const handleOnStatus = useCallback<OnStatusHandler>((status, message) => {
     setTxStatus({ status, message });
-  };
-
-  const getOffsetCost = useCallback(async () => {
-    if (!retirementParams.retireAmount) return;
-
-    try {
-      const sourceAmount = await publicClient.readContract({
-        address: RETIREMENT_AGGREGATOR_V2,
-        abi: KlimaInfinity,
-        functionName: "getSourceAmountDefaultRetirement",
-        args: [
-          BCT_ADDRESS,
-          BCT_ADDRESS,
-          parseEther(retirementParams.retireAmount),
-        ],
-      });
-
-      setEstimatedCost(formatEther(sourceAmount));
-    } catch (err) {
-      console.error("Error getting offset cost:", err);
-    }
-  }, [retirementParams.retireAmount, publicClient]);
+  }, []);
 
   const handleApprove = useCallback(async () => {
     if (!isConnected) return;
@@ -281,31 +242,20 @@ export default function Klima(
           functionName: 'approve',
           args: [RETIREMENT_AGGREGATOR_V2, parseEther(retirementParams.maxAmountIn)],
         }),
+      }, {
+        onSuccess: (hash) => {
+          setTxHash(hash);
+          handleOnStatus("networkConfirmation");
+        },
+        onError: () => {
+          handleOnStatus("error", "Transaction failed");
+        },
       });
-
-      handleOnStatus("networkConfirmation");
-      await tx.wait();
-      handleOnStatus("done", "Approval successful");
-      await checkAllowance();
     } catch (err) {
       handleOnStatus("error", "Approval failed");
       console.error("Error approving:", err);
     }
-  }, [isConnected, retirementParams.maxAmountIn, sendTransaction, checkAllowance]);
-
-  // Effect to check allowance and get cost when values change
-  useEffect(() => {
-    if (isConnected && chainId === 137) {
-      checkAllowance();
-    }
-  }, [isConnected, chainId, checkAllowance]);
-
-  // Effect to update cost estimation when retirement amount changes
-  useEffect(() => {
-    if (isConnected && chainId === 137 && retirementParams.retireAmount) {
-      getOffsetCost();
-    }
-  }, [isConnected, chainId, retirementParams.retireAmount, getOffsetCost]);
+  }, [isConnected, retirementParams.maxAmountIn, sendTransaction]);
 
   // Add input validation
   const validateInputs = useCallback(() => {
@@ -334,6 +284,15 @@ export default function Klima(
   const getPolygonScanLink = (hash: string) => {
     return `https://polygonscan.com/tx/${hash}`;
   };
+
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      const successMsg = `Successfully retired ${retirementParams.retireAmount} BCT`;
+      handleOnStatus("done", successMsg);
+      setSuccessMessage(successMsg);
+      resetForm();
+    }
+  }, [isConfirmed, txHash, retirementParams.retireAmount, handleOnStatus, resetForm]);
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
